@@ -21,10 +21,11 @@ go build -o gh-active ./cmd/gh-active/
 ## 快速开始
 
 ```bash
-# 设置 GitHub Token
-export GITHUB_TOKEN=ghp_xxxxx
+# 如果你已经用 gh CLI 登录过，直接用，零配置
+gh-active report --user=torvalds --no-llm
 
-# 生成上周周报（纯数据，不调 LLM）
+# 或者手动指定 token
+export GITHUB_TOKEN=ghp_xxxxx
 gh-active report --user=torvalds --no-llm
 
 # 用 Claude 生成摘要
@@ -76,6 +77,16 @@ report:
 
 环境变量优先级高于配置文件。
 
+### GitHub 鉴权
+
+按以下优先级获取 GitHub Token，**无需重复配置**：
+
+1. `GITHUB_TOKEN` 环境变量
+2. `~/.gh-active.yaml` 中的 `github.token`
+3. `gh auth token`（自动复用 gh CLI 的登录状态）
+
+已经 `gh auth login` 过的用户开箱即用，零配置。
+
 ## 工作原理
 
 ```
@@ -103,7 +114,6 @@ GitHub Events API → 分页拉取 → Compare API 获取 commits → SHA 去重
 
 - Events API 最多返回 300 个事件（30 天内），对周报场景足够
 - Compare API 对 force push 或已删除的分支可能失败，这些 push 会被静默跳过
-- 需要 `GITHUB_TOKEN` 访问私有仓库活动
 
 ## License
 

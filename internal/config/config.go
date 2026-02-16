@@ -2,7 +2,9 @@ package config
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -66,7 +68,23 @@ func Load() (*Config, error) {
 		cfg.LLM.OpenAI.APIKey = v
 	}
 
+	// fallback: use gh CLI auth token if no GitHub token configured
+	if cfg.GitHub.Token == "" {
+		if token := ghAuthToken(); token != "" {
+			cfg.GitHub.Token = token
+		}
+	}
+
 	return cfg, nil
+}
+
+// ghAuthToken tries to get the GitHub token from the gh CLI.
+func ghAuthToken() string {
+	out, err := exec.Command("gh", "auth", "token").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
 }
 
 func DefaultYAML() string {
