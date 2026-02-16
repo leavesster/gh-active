@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	openai "github.com/sashabaranov/go-openai"
-	"github.com/yleaf/gh-active/pkg/model"
+	"github.com/leavesster/gh-active/pkg/model"
 )
 
 type OpenAI struct {
@@ -13,9 +13,13 @@ type OpenAI struct {
 	model  string
 }
 
-func NewOpenAI(apiKey, modelName string) *OpenAI {
+func NewOpenAI(apiKey, modelName, baseURL string) *OpenAI {
+	cfg := openai.DefaultConfig(apiKey)
+	if baseURL != "" {
+		cfg.BaseURL = baseURL
+	}
 	o := &OpenAI{
-		client: openai.NewClient(apiKey),
+		client: openai.NewClientWithConfig(cfg),
 		model:  modelName,
 	}
 	if o.model == "" {

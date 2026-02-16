@@ -26,13 +26,15 @@ type LLMConfig struct {
 }
 
 type ClaudeConfig struct {
-	APIKey string `yaml:"api_key"`
-	Model  string `yaml:"model"`
+	APIKey  string `yaml:"api_key"`
+	Model   string `yaml:"model"`
+	BaseURL string `yaml:"base_url"`
 }
 
 type OpenAIConfig struct {
-	APIKey string `yaml:"api_key"`
-	Model  string `yaml:"model"`
+	APIKey  string `yaml:"api_key"`
+	Model   string `yaml:"model"`
+	BaseURL string `yaml:"base_url"`
 }
 
 type ReportConfig struct {
@@ -96,9 +98,11 @@ llm:
   claude:
     api_key: ""       # or set ANTHROPIC_API_KEY env var
     model: claude-sonnet-4-5-20250929
+    base_url: ""      # custom API endpoint (e.g. proxy)
   openai:
     api_key: ""       # or set OPENAI_API_KEY env var
     model: gpt-4o
+    base_url: ""      # custom API endpoint (e.g. proxy)
 
 report:
   language: zh-CN

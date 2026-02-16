@@ -1,119 +1,133 @@
 # gh-active
 
-从 GitHub 用户活动生成周报的 CLI 工具。
+[中文文档](README_zh.md)
 
-拉取 Events API 数据，自动去重（PR merge 产生的重复 commits），用 LLM 生成面向团队/老板的结构化 Markdown 周报。
+CLI tool that generates weekly reports from GitHub user activity.
 
-## 安装
+Fetches Events API data, automatically deduplicates commits (removes duplicates caused by PR merges), and uses LLM to generate structured Markdown weekly reports for your team or manager.
+
+## Install
 
 ```bash
-go install github.com/yleaf/gh-active/cmd/gh-active@latest
+go install github.com/leavesster/gh-active/cmd/gh-active@latest
 ```
 
-或从源码构建：
+Or build from source:
 
 ```bash
-git clone https://github.com/yleaf/gh-active.git
+git clone https://github.com/leavesster/gh-active.git
 cd gh-active
 go build -o gh-active ./cmd/gh-active/
 ```
 
-## 快速开始
+Or run directly from source (no build needed):
 
 ```bash
-# 如果你已经用 gh CLI 登录过，直接用，零配置
+go run ./cmd/gh-active/ report --user=torvalds --no-llm
+```
+
+## Quick Start
+
+```bash
+# Zero config if you're already logged in with gh CLI
 gh-active report --user=torvalds --no-llm
 
-# 或者手动指定 token
+# Or specify a token manually
 export GITHUB_TOKEN=ghp_xxxxx
 gh-active report --user=torvalds --no-llm
 
-# 用 Claude 生成摘要
+# Generate summary with Claude
 export ANTHROPIC_API_KEY=sk-ant-xxxxx
 gh-active report --user=torvalds --llm=claude
 
-# 指定时间范围，输出到文件
+# Specify time range and output to file
 gh-active report --user=torvalds --start=2026-02-10 --end=2026-02-16 -o report.md
+
+# Auto-calculate Mon~Sun from any date in that week
+gh-active report --user=torvalds --week=2026-02-12
 ```
 
-## 用法
+## Usage
 
 ```
 gh-active report [flags]
 
 Flags:
-      --user string     GitHub 用户名（必填）
-      --start string    起始日期 (YYYY-MM-DD)，默认上周一
-      --end string      结束日期 (YYYY-MM-DD)，默认上周日
-      --llm string      LLM 后端 (claude, openai)
-      --no-llm          跳过 LLM，直接输出结构化数据
-  -o, --output string   输出文件路径
+      --user string     GitHub username (required)
+      --week string     Any date in the target week (YYYY-MM-DD), auto-calculates Mon~Sun
+      --start string    Start date (YYYY-MM-DD), default: last Monday
+      --end string      End date (YYYY-MM-DD), default: last Sunday
+      --llm string      LLM backend (claude, openai)
+      --no-llm          Skip LLM, output structured data directly
+  -o, --output string   Output file path
 ```
 
 ```
-gh-active init          创建默认配置文件 ~/.gh-active.yaml
+gh-active init          Create default config file at ~/.gh-active.yaml
 ```
 
-## 配置
+## Configuration
 
-运行 `gh-active init` 生成配置文件，或手动创建 `~/.gh-active.yaml`：
+Run `gh-active init` to generate a config file, or create `~/.gh-active.yaml` manually:
 
 ```yaml
 github:
-  token: ""           # 或设置 GITHUB_TOKEN 环境变量
+  token: ""           # or set GITHUB_TOKEN env var
 
 llm:
   default: claude
   claude:
-    api_key: ""       # 或设置 ANTHROPIC_API_KEY 环境变量
+    api_key: ""       # or set ANTHROPIC_API_KEY env var
     model: claude-sonnet-4-5-20250929
+    base_url: ""      # custom API endpoint (e.g. proxy)
   openai:
-    api_key: ""       # 或设置 OPENAI_API_KEY 环境变量
+    api_key: ""       # or set OPENAI_API_KEY env var
     model: gpt-4o
+    base_url: ""      # custom API endpoint (e.g. proxy)
 
 report:
   language: zh-CN
 ```
 
-环境变量优先级高于配置文件。
+Environment variables take priority over the config file.
 
-### GitHub 鉴权
+### GitHub Authentication
 
-按以下优先级获取 GitHub Token，**无需重复配置**：
+GitHub token is resolved in the following order — **no duplicate setup needed**:
 
-1. `GITHUB_TOKEN` 环境变量
-2. `~/.gh-active.yaml` 中的 `github.token`
-3. `gh auth token`（自动复用 gh CLI 的登录状态）
+1. `GITHUB_TOKEN` environment variable
+2. `github.token` in `~/.gh-active.yaml`
+3. `gh auth token` (automatically reuses gh CLI login)
 
-已经 `gh auth login` 过的用户开箱即用，零配置。
+If you've already run `gh auth login`, it works out of the box with zero configuration.
 
-## 工作原理
+## How It Works
 
 ```
-GitHub Events API → 分页拉取 → Compare API 获取 commits → SHA 去重 → LLM 摘要 → Markdown
+GitHub Events API → Paginated fetch → Compare API for commits → SHA dedup → LLM summary → Markdown
 ```
 
-1. 通过 Events API 拉取用户在时间范围内的所有 PushEvent 和 PullRequestEvent
-2. 对每个 PushEvent，用 Compare API (`before...head`) 获取实际 commit 列表
-3. 对已合并的 PR，获取其 commit SHA 列表
-4. 用 SHA 集合自动去重：Push 中属于 PR 的 commits 被过滤掉
-5. 将去重后的活动喂给 LLM 生成摘要
-6. 输出分"已完成"和"进行中"两个板块的 Markdown 周报
+1. Fetch all PushEvent and PullRequestEvent within the time range via Events API
+2. For each PushEvent, use Compare API (`before...head`) to get the actual commit list
+3. For merged PRs, fetch their commit SHA list
+4. Automatically deduplicate using SHA set: commits in Push that belong to a PR are filtered out
+5. Feed deduplicated activities to LLM for summarization
+6. Output a Markdown report with "Completed" and "In Progress" sections
 
-## 跟踪的活动类型
+## Tracked Activity Types
 
-| 事件 | 状态 | 说明 |
-|------|------|------|
-| PR opened | 进行中 | 本周新开的 PR |
-| PR review_requested | 进行中 | 请求 review 的 PR |
-| PR merged | 已完成 | 已合并的 PR（参与去重） |
-| PR closed (未合并) | 忽略 | — |
-| Push | 已完成 | 去重后的独立 commits |
+| Event | Status | Description |
+|-------|--------|-------------|
+| PR opened | In Progress | PRs opened this week |
+| PR review_requested | In Progress | PRs with review requested |
+| PR merged | Completed | Merged PRs (participates in dedup) |
+| PR closed (not merged) | Ignored | — |
+| Push | Completed | Standalone commits after dedup |
 
-## 限制
+## Limitations
 
-- Events API 最多返回 300 个事件（30 天内），对周报场景足够
-- Compare API 对 force push 或已删除的分支可能失败，这些 push 会被静默跳过
+- Events API returns at most 300 events (within 30 days), sufficient for weekly reports
+- Compare API may fail for force pushes or deleted branches — these pushes are silently skipped
 
 ## License
 

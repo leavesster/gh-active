@@ -1,4 +1,4 @@
-module github.com/yleaf/gh-active
+module github.com/leavesster/gh-active
 
 go 1.24.0
 

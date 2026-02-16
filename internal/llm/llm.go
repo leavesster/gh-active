@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yleaf/gh-active/pkg/model"
+	"github.com/leavesster/gh-active/pkg/model"
 )
 
 type LLM interface {

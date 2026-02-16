@@ -7,7 +7,7 @@ import (
 	"time"
 
 	gh "github.com/google/go-github/v68/github"
-	"github.com/yleaf/gh-active/pkg/model"
+	"github.com/leavesster/gh-active/pkg/model"
 )
 
 func makeEvent(typ string, createdAt time.Time, rawPayload any) *gh.Event {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yleaf/gh-active/pkg/model"
+	"github.com/leavesster/gh-active/pkg/model"
 )
 
 func GenerateMarkdown(r *model.WeeklyReport) string {

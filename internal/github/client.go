@@ -8,7 +8,7 @@ import (
 	"time"
 
 	gh "github.com/google/go-github/v68/github"
-	"github.com/yleaf/gh-active/pkg/model"
+	"github.com/leavesster/gh-active/pkg/model"
 )
 
 type Client struct {

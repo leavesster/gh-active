@@ -6,7 +6,7 @@ import (
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
-	"github.com/yleaf/gh-active/pkg/model"
+	"github.com/leavesster/gh-active/pkg/model"
 )
 
 type Claude struct {
@@ -14,10 +14,13 @@ type Claude struct {
 	model  string
 }
 
-func NewClaude(apiKey, modelName string) *Claude {
+func NewClaude(apiKey, modelName, baseURL string) *Claude {
 	opts := []option.RequestOption{}
 	if apiKey != "" {
 		opts = append(opts, option.WithAPIKey(apiKey))
+	}
+	if baseURL != "" {
+		opts = append(opts, option.WithBaseURL(baseURL))
 	}
 	c := &Claude{
 		client: anthropic.NewClient(opts...),
