@@ -194,3 +194,59 @@ func TestBranchPrefix_Stripped(t *testing.T) {
 		t.Errorf("title = %q, want branch prefix stripped", a.Title)
 	}
 }
+
+func TestPRStatusPriority(t *testing.T) {
+	if prStatusPriority(model.PRStatusMerged) <= prStatusPriority(model.PRStatusReview) {
+		t.Error("merged should outrank review")
+	}
+	if prStatusPriority(model.PRStatusReview) <= prStatusPriority(model.PRStatusOpened) {
+		t.Error("review should outrank opened")
+	}
+}
+
+func TestPRDedup_SamePR_KeepsHighestStatus(t *testing.T) {
+	now := time.Now()
+	url := "https://github.com/x/y/pull/42"
+
+	// Simulate: same PR fires opened then review_requested then merged
+	opened := &model.Activity{
+		Type: model.ActivityTypePR, Repo: "x/y", Title: "feat",
+		URL: url, PRStatus: model.PRStatusOpened, CreatedAt: now.Add(-2 * time.Hour),
+	}
+	review := &model.Activity{
+		Type: model.ActivityTypePR, Repo: "x/y", Title: "feat",
+		URL: url, PRStatus: model.PRStatusReview, CreatedAt: now.Add(-1 * time.Hour),
+	}
+	merged := &model.Activity{
+		Type: model.ActivityTypePR, Repo: "x/y", Title: "feat",
+		URL: url, PRStatus: model.PRStatusMerged, CreatedAt: now,
+		Commits: []model.Commit{{SHA: "abc"}},
+	}
+
+	// Feed them into the dedup map logic
+	byURL := map[string]*model.Activity{}
+	for _, a := range []*model.Activity{opened, review, merged} {
+		existing, seen := byURL[a.URL]
+		if !seen {
+			cp := *a
+			byURL[a.URL] = &cp
+		} else if prStatusPriority(a.PRStatus) > prStatusPriority(existing.PRStatus) {
+			if a.PRStatus == model.PRStatusMerged && len(a.Commits) > 0 {
+				existing.Commits = a.Commits
+			}
+			existing.PRStatus = a.PRStatus
+			existing.CreatedAt = a.CreatedAt
+		}
+	}
+
+	if len(byURL) != 1 {
+		t.Fatalf("expected 1 deduplicated PR, got %d", len(byURL))
+	}
+	result := byURL[url]
+	if result.PRStatus != model.PRStatusMerged {
+		t.Errorf("status = %q, want merged", result.PRStatus)
+	}
+	if len(result.Commits) != 1 || result.Commits[0].SHA != "abc" {
+		t.Error("merged commits should be preserved")
+	}
+}

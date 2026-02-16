@@ -106,12 +106,14 @@ type pushPayload struct {
 
 // ParseEvents converts raw GitHub events into deduplicated Activities.
 // Two-pass approach: first collect PR commit SHAs, then filter pushes.
+// Same PR appearing multiple times is deduplicated by keeping highest-priority status.
 func (c *Client) ParseEvents(ctx context.Context, events []*gh.Event) ([]model.Activity, error) {
 	prCommitSHAs := make(map[string]bool)
-	var prActivities []model.Activity
+	prByURL := make(map[string]*model.Activity) // dedup PRs by URL
+	var prOrder []string                         // preserve first-seen order
 	var pushEvents []*gh.Event
 
-	// Pass 1: process PullRequestEvents
+	// Pass 1: process PullRequestEvents, dedup by PR URL
 	for _, e := range events {
 		switch e.GetType() {
 		case "PullRequestEvent":
@@ -122,13 +124,31 @@ func (c *Client) ParseEvents(ctx context.Context, events []*gh.Event) ([]model.A
 			if err != nil {
 				return nil, err
 			}
-			prActivities = append(prActivities, *a)
 			for _, sha := range shas {
 				prCommitSHAs[sha] = true
+			}
+
+			existing, seen := prByURL[a.URL]
+			if !seen {
+				prByURL[a.URL] = a
+				prOrder = append(prOrder, a.URL)
+			} else if prStatusPriority(a.PRStatus) > prStatusPriority(existing.PRStatus) {
+				// keep commits from merged version
+				if a.PRStatus == model.PRStatusMerged && len(a.Commits) > 0 {
+					existing.Commits = a.Commits
+				}
+				existing.PRStatus = a.PRStatus
+				existing.CreatedAt = a.CreatedAt
 			}
 		case "PushEvent":
 			pushEvents = append(pushEvents, e)
 		}
+	}
+
+	// Collect deduplicated PR activities in order
+	var prActivities []model.Activity
+	for _, url := range prOrder {
+		prActivities = append(prActivities, *prByURL[url])
 	}
 
 	// Pass 2: process PushEvents, skip commits already in PRs
@@ -142,6 +162,21 @@ func (c *Client) ParseEvents(ctx context.Context, events []*gh.Event) ([]model.A
 
 	all := append(prActivities, pushActivities...)
 	return all, nil
+}
+
+// prStatusPriority returns priority for dedup: higher wins.
+// merged > review > opened
+func prStatusPriority(s model.PRStatus) int {
+	switch s {
+	case model.PRStatusMerged:
+		return 3
+	case model.PRStatusReview:
+		return 2
+	case model.PRStatusOpened:
+		return 1
+	default:
+		return 0
+	}
 }
 
 func (c *Client) parsePREvent(ctx context.Context, e *gh.Event) (*model.Activity, []string, error) {
