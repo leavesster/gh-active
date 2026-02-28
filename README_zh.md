@@ -30,6 +30,10 @@ go run ./cmd/gh-active/ report --user=torvalds --no-llm
 
 ```bash
 # 如果你已经用 gh CLI 登录过，直接用，零配置
+# 不传 --user 默认查自己的活动
+gh-active report --no-llm
+
+# 或者查看其他用户
 gh-active report --user=torvalds --no-llm
 
 # 或者手动指定 token
@@ -53,7 +57,7 @@ gh-active report --user=torvalds --week=2026-02-12
 gh-active report [flags]
 
 Flags:
-      --user string     GitHub 用户名（必填）
+      --user string     GitHub 用户名（默认：当前认证用户）
       --week string     目标周内任意日期 (YYYY-MM-DD)，自动计算周一~周日
       --start string    起始日期 (YYYY-MM-DD)，默认上周一
       --end string      结束日期 (YYYY-MM-DD)，默认上周日

@@ -30,6 +30,10 @@ go run ./cmd/gh-active/ report --user=torvalds --no-llm
 
 ```bash
 # Zero config if you're already logged in with gh CLI
+# Omit --user to generate a report for yourself
+gh-active report --no-llm
+
+# Or specify a different user
 gh-active report --user=torvalds --no-llm
 
 # Or specify a token manually
@@ -53,7 +57,7 @@ gh-active report --user=torvalds --week=2026-02-12
 gh-active report [flags]
 
 Flags:
-      --user string     GitHub username (required)
+      --user string     GitHub username (default: authenticated user)
       --week string     Any date in the target week (YYYY-MM-DD), auto-calculates Mon~Sun
       --start string    Start date (YYYY-MM-DD), default: last Monday
       --end string      End date (YYYY-MM-DD), default: last Sunday

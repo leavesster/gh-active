@@ -8,7 +8,8 @@ ls -
 go build ./cmd/gh-active/          # build binary
 go test ./...                       # run all tests
 go test -v ./internal/github/...    # run GitHub client tests with verbose output
-go run ./cmd/gh-active/ report --user=<username> --no-llm  # quick smoke test
+go run ./cmd/gh-active/ report --no-llm                    # quick smoke test (uses authenticated user)
+go run ./cmd/gh-active/ report --user=<username> --no-llm  # smoke test for specific user
 ```
 
 ## Project Structure

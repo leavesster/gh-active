@@ -45,10 +45,6 @@ func reportCmd() *cobra.Command {
 		Use:   "report",
 		Short: "Generate a weekly report",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if user == "" {
-				return fmt.Errorf("--user is required")
-			}
-
 			cfg, err := config.Load()
 			if err != nil {
 				return err
@@ -65,6 +61,13 @@ func reportCmd() *cobra.Command {
 
 			ctx := context.Background()
 			client := ghclient.NewClient(cfg.GitHub.Token)
+
+			if user == "" {
+				user, err = client.AuthenticatedUser(ctx)
+				if err != nil {
+					return fmt.Errorf("resolve current user (try --user flag): %w", err)
+				}
+			}
 
 			fmt.Fprintf(os.Stderr, "Fetching events for %s (%s ~ %s)...\n",
 				user, startTime.Format("2006-01-02"), endTime.Format("2006-01-02"))
@@ -132,7 +135,7 @@ func reportCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&user, "user", "", "GitHub username (required)")
+	cmd.Flags().StringVar(&user, "user", "", "GitHub username (default: authenticated user)")
 	cmd.Flags().StringVar(&start, "start", "", "Start date (YYYY-MM-DD), default: last Monday")
 	cmd.Flags().StringVar(&end, "end", "", "End date (YYYY-MM-DD), default: last Sunday")
 	cmd.Flags().StringVar(&week, "week", "", "Any date in the target week (YYYY-MM-DD), auto-calculates Mon~Sun")

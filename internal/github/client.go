@@ -21,6 +21,15 @@ func NewClient(token string) *Client {
 	}
 }
 
+// AuthenticatedUser returns the login of the token owner.
+func (c *Client) AuthenticatedUser(ctx context.Context) (string, error) {
+	user, _, err := c.gh.Users.Get(ctx, "")
+	if err != nil {
+		return "", fmt.Errorf("get authenticated user: %w", err)
+	}
+	return user.GetLogin(), nil
+}
+
 // FetchEvents retrieves all user events within the given time range.
 // Events API returns max 300 events (10 pages x 30 per page).
 func (c *Client) FetchEvents(ctx context.Context, user string, start, end time.Time) ([]*gh.Event, error) {
