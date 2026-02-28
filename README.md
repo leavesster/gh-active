@@ -49,6 +49,9 @@ gh-active report --user=torvalds --start=2026-02-10 --end=2026-02-16 -o report.m
 
 # Auto-calculate Mon~Sun from any date in that week
 gh-active report --user=torvalds --week=2026-02-12
+
+# Query last week (previous completed Mon~Sun)
+gh-active report --week=previous
 ```
 
 ## Usage
@@ -58,9 +61,9 @@ gh-active report [flags]
 
 Flags:
       --user string     GitHub username (default: authenticated user)
-      --week string     Any date in the target week (YYYY-MM-DD), auto-calculates Mon~Sun
-      --start string    Start date (YYYY-MM-DD), default: last Monday
-      --end string      End date (YYYY-MM-DD), default: last Sunday
+      --week string     "previous" for last week, or any date (YYYY-MM-DD) to pick that week
+      --start string    Start date (YYYY-MM-DD), default: this Monday
+      --end string      End date (YYYY-MM-DD), default: now
       --llm string      LLM backend (claude, openai)
       --no-llm          Skip LLM, output structured data directly
   -o, --output string   Output file path

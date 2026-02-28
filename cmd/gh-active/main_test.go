@@ -40,3 +40,43 @@ func TestParseTimeRange_Week(t *testing.T) {
 		t.Errorf("end date = %s, want 2026-02-22", got)
 	}
 }
+
+func TestParseTimeRange_Previous(t *testing.T) {
+	start, end, err := parseTimeRange("", "", "previous")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now()
+	wantStart := weekMonday(now).AddDate(0, 0, -7)
+	wantEnd := wantStart.AddDate(0, 0, 7).Add(-time.Second)
+
+	if got := start.Format("2006-01-02"); got != wantStart.Format("2006-01-02") {
+		t.Errorf("start = %s, want %s", got, wantStart.Format("2006-01-02"))
+	}
+	if got := end.Format("2006-01-02"); got != wantEnd.Format("2006-01-02") {
+		t.Errorf("end = %s, want %s", got, wantEnd.Format("2006-01-02"))
+	}
+}
+
+func TestParseTimeRange_Default_CurrentWeek(t *testing.T) {
+	start, end, err := parseTimeRange("", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now()
+	wantMonday := weekMonday(now)
+
+	if got := start.Format("2006-01-02"); got != wantMonday.Format("2006-01-02") {
+		t.Errorf("start = %s, want %s (this Monday)", got, wantMonday.Format("2006-01-02"))
+	}
+	// end should be close to now (within a few seconds)
+	diff := now.Sub(end)
+	if diff < 0 {
+		diff = -diff
+	}
+	if diff > 5*time.Second {
+		t.Errorf("end = %v, want close to now (%v), diff = %v", end, now, diff)
+	}
+}

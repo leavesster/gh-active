@@ -138,7 +138,7 @@ func reportCmd() *cobra.Command {
 	cmd.Flags().StringVar(&user, "user", "", "GitHub username (default: authenticated user)")
 	cmd.Flags().StringVar(&start, "start", "", "Start date (YYYY-MM-DD), default: last Monday")
 	cmd.Flags().StringVar(&end, "end", "", "End date (YYYY-MM-DD), default: last Sunday")
-	cmd.Flags().StringVar(&week, "week", "", "Any date in the target week (YYYY-MM-DD), auto-calculates Mon~Sun")
+	cmd.Flags().StringVar(&week, "week", "", "\"previous\" for last week, or any date (YYYY-MM-DD) to pick that week")
 	cmd.Flags().StringVar(&llmName, "llm", "", "LLM backend (claude, openai)")
 	cmd.Flags().StringVarP(&output, "output", "o", "", "Output file path")
 	cmd.Flags().BoolVar(&noLLM, "no-llm", false, "Skip LLM summarization")
@@ -173,7 +173,14 @@ func initCmd() *cobra.Command {
 func parseTimeRange(start, end, week string) (time.Time, time.Time, error) {
 	now := time.Now()
 
-	// --week: any date → Monday~Sunday of that week
+	// --week=previous: last completed week (Mon~Sun)
+	if week == "previous" {
+		mon := weekMonday(now).AddDate(0, 0, -7)
+		sun := mon.AddDate(0, 0, 7).Add(-time.Second)
+		return mon, sun, nil
+	}
+
+	// --week=YYYY-MM-DD: Monday~Sunday of that week
 	if week != "" {
 		d, err := time.Parse("2006-01-02", week)
 		if err != nil {
@@ -196,11 +203,8 @@ func parseTimeRange(start, end, week string) (time.Time, time.Time, error) {
 		return s, e.Add(24*time.Hour - time.Second), nil
 	}
 
-	// default: last week (Monday to Sunday)
-	lastMonday := weekMonday(now).AddDate(0, 0, -7)
-	lastSunday := lastMonday.AddDate(0, 0, 7).Add(-time.Second)
-
-	return lastMonday, lastSunday, nil
+	// default: current week (this Monday ~ now)
+	return weekMonday(now), now, nil
 }
 
 // weekMonday returns Monday 00:00:00 of the week containing d.

@@ -54,7 +54,7 @@ internal/config/config.go     YAML config + env var override + gh CLI auth fallb
 - **PR status priority:** merged(3) > review(2) > opened(1). Same PR with multiple events in one week keeps the highest status.
 - **GitHub auth chain:** `GITHUB_TOKEN` env → config file → `gh auth token` CLI fallback.
 - **LLM `base_url`:** Both Claude and OpenAI support custom base URL for proxy/gateway setups.
-- **`--week` flag:** Pass any date, `weekMonday()` computes the Monday 00:00 of that week. Time range priority: `--week` > `--start/--end` > default (last week).
+- **`--week` flag:** `previous` for last completed week; or pass any date, `weekMonday()` computes the Monday 00:00 of that week. Time range priority: `--week` > `--start/--end` > default (current week, Mon~now).
 - **Compare API failures are silent:** Force pushes or deleted branches cause 404 — these pushes are skipped, not errors.
 
 ## Common Pitfalls

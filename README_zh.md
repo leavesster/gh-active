@@ -49,6 +49,9 @@ gh-active report --user=torvalds --start=2026-02-10 --end=2026-02-16 -o report.m
 
 # 传入任意日期，自动计算所在周的周一~周日
 gh-active report --user=torvalds --week=2026-02-12
+
+# 查上周（上一个完整周一~周日）
+gh-active report --week=previous
 ```
 
 ## 用法
@@ -58,9 +61,9 @@ gh-active report [flags]
 
 Flags:
       --user string     GitHub 用户名（默认：当前认证用户）
-      --week string     目标周内任意日期 (YYYY-MM-DD)，自动计算周一~周日
-      --start string    起始日期 (YYYY-MM-DD)，默认上周一
-      --end string      结束日期 (YYYY-MM-DD)，默认上周日
+      --week string     "previous" 查上周，或任意日期 (YYYY-MM-DD) 查所在周
+      --start string    起始日期 (YYYY-MM-DD)，默认本周一
+      --end string      结束日期 (YYYY-MM-DD)，默认当前时间
       --llm string      LLM 后端 (claude, openai)
       --no-llm          跳过 LLM，直接输出结构化数据
   -o, --output string   输出文件路径
