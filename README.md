@@ -47,6 +47,11 @@ gh-active report --user=torvalds --llm=claude
 # Specify time range and output to file
 gh-active report --user=torvalds --start=2026-02-10 --end=2026-02-16 -o report.md
 
+# Or configure a default output path once
+gh-active init
+# then set report.output in ~/.gh-active.yaml
+gh-active report --week=previous
+
 # Auto-calculate Mon~Sun from any date in that week
 gh-active report --user=torvalds --week=2026-02-12
 
@@ -94,6 +99,7 @@ llm:
 
 report:
   language: zh-CN
+  output: ""          # default stdout; can be overridden by --output
 ```
 
 Environment variables take priority over the config file.
@@ -118,7 +124,7 @@ GitHub Events API → Paginated fetch → Compare API for commits → SHA dedup 
 2. For each PushEvent, use Compare API (`before...head`) to get the actual commit list
 3. For merged PRs, fetch their commit SHA list
 4. Automatically deduplicate using SHA set: commits in Push that belong to a PR are filtered out
-5. Feed deduplicated activities to LLM for summarization
+5. Feed deduplicated activities to LLM with prompt constraints: group by repository and keep near one sentence per event
 6. Output a Markdown report with "Completed" and "In Progress" sections
 
 ## Tracked Activity Types

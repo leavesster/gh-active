@@ -47,6 +47,11 @@ gh-active report --user=torvalds --llm=claude
 # 指定时间范围，输出到文件
 gh-active report --user=torvalds --start=2026-02-10 --end=2026-02-16 -o report.md
 
+# 或者在配置里设置默认输出路径
+gh-active init
+# 然后在 ~/.gh-active.yaml 里设置 report.output
+gh-active report --week=previous
+
 # 传入任意日期，自动计算所在周的周一~周日
 gh-active report --user=torvalds --week=2026-02-12
 
@@ -94,6 +99,7 @@ llm:
 
 report:
   language: zh-CN
+  output: ""          # 默认输出到 stdout，可被 --output 覆盖
 ```
 
 环境变量优先级高于配置文件。
@@ -118,7 +124,7 @@ GitHub Events API → 分页拉取 → Compare API 获取 commits → SHA 去重
 2. 对每个 PushEvent，用 Compare API (`before...head`) 获取实际 commit 列表
 3. 对已合并的 PR，获取其 commit SHA 列表
 4. 用 SHA 集合自动去重：Push 中属于 PR 的 commits 被过滤掉
-5. 将去重后的活动喂给 LLM 生成摘要
+5. 将去重后的活动喂给 LLM，并通过 prompt 约束为按仓库分组、尽量一条 event 一句话
 6. 输出分"已完成"和"进行中"两个板块的 Markdown 周报
 
 ## 跟踪的活动类型

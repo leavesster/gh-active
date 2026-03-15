@@ -8,12 +8,13 @@ import (
 	"sort"
 	"time"
 
-	"github.com/spf13/cobra"
 	"github.com/leavesster/gh-active/internal/config"
 	ghclient "github.com/leavesster/gh-active/internal/github"
 	"github.com/leavesster/gh-active/internal/llm"
+	"github.com/leavesster/gh-active/internal/output"
 	"github.com/leavesster/gh-active/internal/report"
 	"github.com/leavesster/gh-active/pkg/model"
+	"github.com/spf13/cobra"
 )
 
 func main() {
@@ -121,14 +122,15 @@ func reportCmd() *cobra.Command {
 			}
 
 			md := report.GenerateMarkdown(r)
-
-			if output != "" {
-				if err := os.WriteFile(output, []byte(md), 0644); err != nil {
-					return fmt.Errorf("write output: %w", err)
-				}
-				fmt.Fprintf(os.Stderr, "Report written to %s\n", output)
-			} else {
-				fmt.Print(md)
+			target, err := outputWriter(output, cfg.Report.Output)
+			if err != nil {
+				return err
+			}
+			if err := target.Write(md); err != nil {
+				return fmt.Errorf("write output: %w", err)
+			}
+			if target.Target() != "stdout" {
+				fmt.Fprintf(os.Stderr, "Report written to %s\n", target.Target())
 			}
 
 			return nil
@@ -140,7 +142,7 @@ func reportCmd() *cobra.Command {
 	cmd.Flags().StringVar(&end, "end", "", "End date (YYYY-MM-DD), default: last Sunday")
 	cmd.Flags().StringVar(&week, "week", "", "\"previous\" for last week, or any date (YYYY-MM-DD) to pick that week")
 	cmd.Flags().StringVar(&llmName, "llm", "", "LLM backend (claude, openai)")
-	cmd.Flags().StringVarP(&output, "output", "o", "", "Output file path")
+	cmd.Flags().StringVarP(&output, "output", "o", "", "Output file path (overrides report.output config)")
 	cmd.Flags().BoolVar(&noLLM, "no-llm", false, "Skip LLM summarization")
 
 	return cmd
@@ -232,4 +234,11 @@ func newLLM(cfg *config.Config, backend string) (llm.LLM, error) {
 	default:
 		return nil, fmt.Errorf("unknown LLM backend: %q (supported: claude, openai)", backend)
 	}
+}
+
+func outputWriter(flagPath, configPath string) (output.Writer, error) {
+	if flagPath != "" {
+		return output.NewWriter(flagPath)
+	}
+	return output.NewWriter(configPath)
 }

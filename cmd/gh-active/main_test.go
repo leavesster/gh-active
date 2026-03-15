@@ -3,6 +3,8 @@ package main
 import (
 	"testing"
 	"time"
+
+	"github.com/leavesster/gh-active/internal/output"
 )
 
 func TestWeekMonday(t *testing.T) {
@@ -78,5 +80,31 @@ func TestParseTimeRange_Default_CurrentWeek(t *testing.T) {
 	}
 	if diff > 5*time.Second {
 		t.Errorf("end = %v, want close to now (%v), diff = %v", end, now, diff)
+	}
+}
+
+func TestOutputWriterPrefersFlagPath(t *testing.T) {
+	writer, err := outputWriter("flag.md", "config.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got := writer.Target(); got != "flag.md" {
+		t.Fatalf("target = %q, want %q", got, "flag.md")
+	}
+}
+
+func TestOutputWriterUsesConfigPath(t *testing.T) {
+	writer, err := outputWriter("", "config.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fileWriter, ok := writer.(*output.FileWriter)
+	if !ok {
+		t.Fatalf("writer type = %T, want *output.FileWriter", writer)
+	}
+	if got := fileWriter.Target(); got != "config.md" {
+		t.Fatalf("target = %q, want %q", got, "config.md")
 	}
 }

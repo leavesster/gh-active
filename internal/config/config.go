@@ -39,6 +39,7 @@ type OpenAIConfig struct {
 
 type ReportConfig struct {
 	Language string `yaml:"language"`
+	Output   string `yaml:"output"`
 }
 
 func Load() (*Config, error) {
@@ -106,5 +107,6 @@ llm:
 
 report:
   language: zh-CN
+  output: ""          # default stdout; can also be overridden by --output
 `
 }

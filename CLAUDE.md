@@ -23,6 +23,7 @@ internal/github/client_test.go Unit tests for dedup and event parsing.
 internal/llm/llm.go           LLM interface + prompt builder.
 internal/llm/claude.go        Anthropic Claude backend.
 internal/llm/openai.go        OpenAI backend.
+internal/output/output.go     Output interface. Stdout/file writers for report content.
 internal/report/markdown.go   Markdown report renderer (Completed / In Progress).
 internal/config/config.go     YAML config + env var override + gh CLI auth fallback.
 ```
@@ -54,6 +55,8 @@ internal/config/config.go     YAML config + env var override + gh CLI auth fallb
 - **PR status priority:** merged(3) > review(2) > opened(1). Same PR with multiple events in one week keeps the highest status.
 - **GitHub auth chain:** `GITHUB_TOKEN` env → config file → `gh auth token` CLI fallback.
 - **LLM `base_url`:** Both Claude and OpenAI support custom base URL for proxy/gateway setups.
+- **LLM prompt output style:** Summary should be grouped by repository, and each input event should map to a single concise sentence whenever possible.
+- **Report output:** `--output/-o` overrides `report.output` in config. Empty output means write to stdout. File output creates parent directories automatically.
 - **`--week` flag:** `previous` for last completed week; or pass any date, `weekMonday()` computes the Monday 00:00 of that week. Time range priority: `--week` > `--start/--end` > default (current week, Mon~now).
 - **Compare API failures are silent:** Force pushes or deleted branches cause 404 — these pushes are skipped, not errors.
 
