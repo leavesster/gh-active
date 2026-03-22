@@ -27,8 +27,25 @@ The report is for team leads / managers. Write in %s.
 
 Structure:
 1. One-paragraph executive summary of key achievements
-2. Group work by theme/project, not chronologically
-3. Highlight impact, not just activity
+2. Group work by repository (one section per repo)
+3. Under each repository, list events as bullet points
+4. Each event should be summarized in exactly one sentence
+5. Highlight impact, not just activity
+
+Output format:
+- ## Summary
+- <one paragraph>
+- ## By Repository
+- ### owner/repo
+- - <one sentence for one event>
+
+Rules:
+- Prefer one bullet for one input event (keep near 1:1 mapping).
+- Do not mix multiple repositories in one bullet.
+- Do not merge unrelated events into one sentence.
+- If there are many events, merge only highly related events within the same repository into one sentence.
+- Keep language concise and concrete.
+- Do not include a top-level title heading.
 
 Activities:
 
@@ -39,16 +56,17 @@ Activities:
 		langName(opts.Language),
 	))
 
-	for _, a := range activities {
+	for i, a := range activities {
+		eventID := fmt.Sprintf("E%03d", i+1)
 		switch a.Type {
 		case model.ActivityTypePR:
-			b.WriteString(fmt.Sprintf("[PR][%s][%s] %s", a.PRStatus, a.Repo, a.Title))
+			b.WriteString(fmt.Sprintf("[%s][PR][%s][%s] %s", eventID, a.PRStatus, a.Repo, a.Title))
 			if a.URL != "" {
 				b.WriteString(fmt.Sprintf(" (%s)", a.URL))
 			}
 			b.WriteByte('\n')
 		case model.ActivityTypePush:
-			b.WriteString(fmt.Sprintf("[Push][%s] %s\n", a.Repo, a.Title))
+			b.WriteString(fmt.Sprintf("[%s][Push][%s] %s\n", eventID, a.Repo, a.Title))
 			for _, c := range a.Commits {
 				msg := c.Message
 				if i := strings.IndexByte(msg, '\n'); i >= 0 {
@@ -63,7 +81,7 @@ Activities:
 		b.WriteString("(No activity this week)\n")
 	}
 
-	b.WriteString("\nOutput the report in Markdown. Do not include a title heading — it will be added separately.")
+	b.WriteString("\nOutput the report in Markdown.")
 	return b.String()
 }
 
