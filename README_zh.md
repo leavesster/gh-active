@@ -133,13 +133,14 @@ GitHub Events API → 分页拉取 → Compare API 获取 commits → SHA 去重
 |------|------|------|
 | PR opened | 进行中 | 本周新开的 PR |
 | PR review_requested | 进行中 | 请求 review 的 PR |
-| PR merged | 已完成 | 已合并的 PR（参与去重） |
+| PR merged / closed+merged | 已完成 | 已合并的 PR（参与去重） |
 | PR closed (未合并) | 忽略 | — |
 | Push | 已完成 | 去重后的独立 commits |
 
 ## 限制
 
-- Events API 最多返回 300 个事件（30 天内），对周报场景足够
+- GitHub 对这个 Events API 资源限制最多 10 页；工具会按每页 100 条拉取，并在尚未到达起始时间就撞到页上限时给出告警
+- performed-events 里的 PR payload 可能是缩略版；当缺少标题或 HTML 链接时，工具会回退到 `owner/repo#number`，必要时补拉完整 PR 信息
 - Compare API 对 force push 或已删除的分支可能失败，这些 push 会被静默跳过
 
 ## License

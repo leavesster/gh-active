@@ -52,7 +52,8 @@ internal/config/config.go     YAML config + env var override + gh CLI auth fallb
 ## Key Design Decisions
 
 - **Events API PushEvent has no commits array** (unlike webhook PushEvent). Only `ref`, `head`, `before` are available. We use Compare API to get actual commits.
-- **PR status priority:** merged(3) > review(2) > opened(1). Same PR with multiple events in one week keeps the highest status.
+- **PR status priority:** merged(3) > review(2) > opened(1). Same PR with multiple events in one week keeps the highest status. Performed-events may emit merged PRs as `action=merged` rather than `closed + merged=true`.
+- **PR payloads may be partial:** `users/{username}/events` can omit PR title / HTML URL / merged bool. Parser should fall back to repo+number and fetch full PR details when needed.
 - **GitHub auth chain:** `GITHUB_TOKEN` env → config file → `gh auth token` CLI fallback.
 - **LLM `base_url`:** Both Claude and OpenAI support custom base URL for proxy/gateway setups.
 - **LLM prompt output style:** Summary should be grouped by repository, and each input event should map to a single concise sentence whenever possible.
@@ -65,4 +66,4 @@ internal/config/config.go     YAML config + env var override + gh CLI auth fallb
 - `go-github` `Event.ParsePayload()` returns `any` — always type-assert.
 - `Event.GetRepo().GetName()` returns `"owner/repo"` format, needs `strings.SplitN(repo, "/", 2)` before API calls.
 - Anthropic SDK `NewClient()` returns value type, not pointer.
-- Events API returns newest-first. `FetchEvents` stops early when it hits events before the start time.
+- Events API is roughly newest-first, but older events may still appear interleaved in a page. `FetchEvents` requests 100 items per page, filters client-side across all available pages, and reports when GitHub's 10-page cap truncates the requested range.

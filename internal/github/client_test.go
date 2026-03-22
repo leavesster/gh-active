@@ -35,6 +35,16 @@ func makePRPayload(action string, number int, title, htmlURL string, merged bool
 	}
 }
 
+func makePRPayloadPartial(action string, number int, apiURL string) *gh.PullRequestEvent {
+	return &gh.PullRequestEvent{
+		Action: gh.Ptr(action),
+		PullRequest: &gh.PullRequest{
+			Number: gh.Ptr(number),
+			URL:    gh.Ptr(apiURL),
+		},
+	}
+}
+
 // parsePushEventFromPayload is a test helper that creates a push activity
 // from a pushPayload directly, simulating what the real parsePushEvent does
 // but without needing the Compare API.
@@ -179,6 +189,52 @@ func TestParsePREvent_ReviewRequested(t *testing.T) {
 	}
 }
 
+func TestParsePREvent_MergedAction(t *testing.T) {
+	client := &Client{}
+	payload := makePRPayloadPartial("merged", 429, "https://api.github.com/repos/owner/repo/pulls/429")
+	e := makeEvent("PullRequestEvent", time.Now(), payload)
+
+	a, shas, err := client.parsePREvent(nil, e)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a == nil {
+		t.Fatal("expected activity for merged PR action")
+	}
+	if a.PRStatus != model.PRStatusMerged {
+		t.Errorf("status = %q, want %q", a.PRStatus, model.PRStatusMerged)
+	}
+	if a.Title != "PR #429" {
+		t.Errorf("title = %q, want %q", a.Title, "PR #429")
+	}
+	if a.URL != "https://github.com/owner/repo/pull/429" {
+		t.Errorf("url = %q, want %q", a.URL, "https://github.com/owner/repo/pull/429")
+	}
+	if len(shas) != 0 {
+		t.Errorf("shas length = %d, want 0 for nil github client", len(shas))
+	}
+}
+
+func TestParsePREvent_PartialPayloadFallsBackToGitHubURL(t *testing.T) {
+	client := &Client{}
+	payload := makePRPayloadPartial("opened", 42, "https://api.github.com/repos/owner/repo/pulls/42")
+	e := makeEvent("PullRequestEvent", time.Now(), payload)
+
+	a, _, err := client.parsePREvent(nil, e)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a == nil {
+		t.Fatal("expected activity for partial PR payload")
+	}
+	if a.Title != "PR #42" {
+		t.Errorf("title = %q, want %q", a.Title, "PR #42")
+	}
+	if a.URL != "https://github.com/owner/repo/pull/42" {
+		t.Errorf("url = %q, want %q", a.URL, "https://github.com/owner/repo/pull/42")
+	}
+}
+
 func TestBranchPrefix_Stripped(t *testing.T) {
 	commits := []model.Commit{
 		{SHA: "xyz", Message: "test"},
@@ -248,5 +304,24 @@ func TestPRDedup_SamePR_KeepsHighestStatus(t *testing.T) {
 	}
 	if len(result.Commits) != 1 || result.Commits[0].SHA != "abc" {
 		t.Error("merged commits should be preserved")
+	}
+}
+
+func TestFilterEventsInRange_KeepsLaterMatchesAfterOlderEvent(t *testing.T) {
+	start := time.Date(2026, 3, 16, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2026, 3, 22, 23, 59, 59, 0, time.UTC)
+
+	events := []*gh.Event{
+		makeEvent("PushEvent", time.Date(2026, 3, 21, 8, 0, 0, 0, time.UTC), pushPayload{}),
+		makeEvent("PullRequestEvent", time.Date(2026, 2, 10, 13, 24, 32, 0, time.UTC), makePRPayload("closed", 1, "old", "https://github.com/x/y/pull/1", false)),
+		makeEvent("PullRequestEvent", time.Date(2026, 3, 16, 11, 12, 14, 0, time.UTC), makePRPayloadPartial("opened", 429, "https://api.github.com/repos/owner/repo/pulls/429")),
+	}
+
+	filtered := filterEventsInRange(events, start, end)
+	if got, want := len(filtered), 2; got != want {
+		t.Fatalf("filtered length = %d, want %d", got, want)
+	}
+	if got, want := filtered[1].GetCreatedAt().Time, time.Date(2026, 3, 16, 11, 12, 14, 0, time.UTC); got != want {
+		t.Fatalf("last filtered time = %v, want %v", got, want)
 	}
 }

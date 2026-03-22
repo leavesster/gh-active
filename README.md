@@ -133,13 +133,14 @@ GitHub Events API → Paginated fetch → Compare API for commits → SHA dedup 
 |-------|--------|-------------|
 | PR opened | In Progress | PRs opened this week |
 | PR review_requested | In Progress | PRs with review requested |
-| PR merged | Completed | Merged PRs (participates in dedup) |
+| PR merged / closed+merged | Completed | Merged PRs (participates in dedup) |
 | PR closed (not merged) | Ignored | — |
 | Push | Completed | Standalone commits after dedup |
 
 ## Limitations
 
-- Events API returns at most 300 events (within 30 days), sufficient for weekly reports
+- GitHub limits this Events API resource to 10 pages; the tool requests 100 items per page and warns if it hits that cap before reaching the requested start date
+- Performed-events PR payloads may be partial; the tool falls back to `owner/repo#number` and may fetch full PR details when title or HTML URL is missing
 - Compare API may fail for force pushes or deleted branches — these pushes are silently skipped
 
 ## License

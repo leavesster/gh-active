@@ -31,39 +31,38 @@ func (c *Client) AuthenticatedUser(ctx context.Context) (string, error) {
 }
 
 // FetchEvents retrieves all user events within the given time range.
-// Events API returns max 300 events (10 pages x 30 per page).
-func (c *Client) FetchEvents(ctx context.Context, user string, start, end time.Time) ([]*gh.Event, error) {
+// GitHub limits this resource to 10 pages. We use 100 items per page to maximize coverage.
+// The returned bool reports whether fetching stopped at the pagination cap.
+func (c *Client) FetchEvents(ctx context.Context, user string, start, end time.Time) ([]*gh.Event, bool, error) {
 	var all []*gh.Event
-	opts := &gh.ListOptions{PerPage: 30, Page: 1}
+	opts := &gh.ListOptions{PerPage: 100, Page: 1}
 
 	for opts.Page <= 10 {
 		events, resp, err := c.gh.Activity.ListEventsPerformedByUser(ctx, user, false, opts)
 		if err != nil {
-			return nil, fmt.Errorf("fetch events page %d: %w", opts.Page, err)
+			return nil, false, fmt.Errorf("fetch events page %d: %w", opts.Page, err)
 		}
 
-		for _, e := range events {
-			t := e.GetCreatedAt().Time
-			if t.Before(start) {
-				return all, nil
-			}
-			if t.After(end) {
-				continue
-			}
-			all = append(all, e)
-		}
+		all = append(all, filterEventsInRange(events, start, end)...)
 
 		if resp.NextPage == 0 {
 			break
 		}
+		if opts.Page == 10 {
+			return all, true, nil
+		}
 		opts.Page = resp.NextPage
 	}
 
-	return all, nil
+	return all, false, nil
 }
 
 // FetchPRCommits returns commit SHAs for a given pull request.
 func (c *Client) FetchPRCommits(ctx context.Context, owner, repo string, prNumber int) ([]string, error) {
+	if c == nil || c.gh == nil {
+		return nil, nil
+	}
+
 	var shas []string
 	opts := &gh.ListOptions{PerPage: 100}
 
@@ -84,8 +83,25 @@ func (c *Client) FetchPRCommits(ctx context.Context, owner, repo string, prNumbe
 	return shas, nil
 }
 
+// FetchPR returns full pull request details for a given PR number.
+func (c *Client) FetchPR(ctx context.Context, owner, repo string, prNumber int) (*gh.PullRequest, error) {
+	if c == nil || c.gh == nil {
+		return nil, nil
+	}
+
+	pr, _, err := c.gh.PullRequests.Get(ctx, owner, repo, prNumber)
+	if err != nil {
+		return nil, fmt.Errorf("fetch PR #%d: %w", prNumber, err)
+	}
+	return pr, nil
+}
+
 // FetchCompareCommits gets commits between two SHAs using the compare API.
 func (c *Client) FetchCompareCommits(ctx context.Context, owner, repo, base, head string) ([]model.Commit, error) {
+	if c == nil || c.gh == nil {
+		return nil, nil
+	}
+
 	comp, _, err := c.gh.Repositories.CompareCommits(ctx, owner, repo, base, head, &gh.ListOptions{PerPage: 100})
 	if err != nil {
 		return nil, fmt.Errorf("compare %s...%s: %w", base[:7], head[:7], err)
@@ -105,6 +121,26 @@ func (c *Client) FetchCompareCommits(ctx context.Context, owner, repo, base, hea
 	return commits, nil
 }
 
+func splitRepoName(repo string) (owner, name string, ok bool) {
+	parts := strings.SplitN(repo, "/", 2)
+	if len(parts) != 2 {
+		return "", "", false
+	}
+	return parts[0], parts[1], true
+}
+
+func filterEventsInRange(events []*gh.Event, start, end time.Time) []*gh.Event {
+	var filtered []*gh.Event
+	for _, e := range events {
+		t := e.GetCreatedAt().Time
+		if t.Before(start) || t.After(end) {
+			continue
+		}
+		filtered = append(filtered, e)
+	}
+	return filtered
+}
+
 // pushPayload extracts fields from Events API PushEvent raw payload,
 // which only contains ref/head/before (no commits array).
 type pushPayload struct {
@@ -119,7 +155,7 @@ type pushPayload struct {
 func (c *Client) ParseEvents(ctx context.Context, events []*gh.Event) ([]model.Activity, error) {
 	prCommitSHAs := make(map[string]bool)
 	prByURL := make(map[string]*model.Activity) // dedup PRs by URL
-	var prOrder []string                         // preserve first-seen order
+	var prOrder []string                        // preserve first-seen order
 	var pushEvents []*gh.Event
 
 	// Pass 1: process PullRequestEvents, dedup by PR URL
@@ -200,43 +236,78 @@ func (c *Client) parsePREvent(ctx context.Context, e *gh.Event) (*model.Activity
 
 	action := pr.GetAction()
 	pull := pr.GetPullRequest()
+	number := pull.GetNumber()
+	title := pull.GetTitle()
+	htmlURL := pull.GetHTMLURL()
+	merged := pull.GetMerged()
+	apiURL := pull.GetURL()
+	repo := e.GetRepo().GetName()
+	owner, repoName, repoOK := splitRepoName(repo)
+
+	// Performed-events payloads often include only a partial pull_request object.
+	// Fill in missing user-facing metadata from the repo/number we already have.
+	if number > 0 && repoOK && c != nil && c.gh != nil && (title == "" || htmlURL == "" || (action == "closed" && !merged)) {
+		fullPR, err := c.FetchPR(ctx, owner, repoName, number)
+		if err != nil {
+			return nil, nil, err
+		}
+		if fullPR != nil {
+			if title == "" {
+				title = fullPR.GetTitle()
+			}
+			if htmlURL == "" {
+				htmlURL = fullPR.GetHTMLURL()
+			}
+			if !merged {
+				merged = fullPR.GetMerged()
+			}
+		}
+	}
+
+	if htmlURL == "" && repoOK && number > 0 {
+		htmlURL = fmt.Sprintf("https://github.com/%s/%s/pull/%d", owner, repoName, number)
+	}
+	if title == "" && number > 0 {
+		title = fmt.Sprintf("PR #%d", number)
+	}
+	if htmlURL == "" {
+		htmlURL = apiURL
+	}
 
 	var status model.PRStatus
 	switch {
-	case action == "closed" && pull.GetMerged():
+	case action == "merged":
+		status = model.PRStatusMerged
+	case action == "closed" && merged:
 		status = model.PRStatusMerged
 	case action == "opened":
 		status = model.PRStatusOpened
 	case action == "review_requested":
 		status = model.PRStatusReview
-	case action == "closed" && !pull.GetMerged():
+	case action == "closed" && !merged:
 		return nil, nil, nil
 	default:
 		return nil, nil, nil
 	}
 
-	repo := e.GetRepo().GetName()
 	activity := &model.Activity{
 		Type:      model.ActivityTypePR,
 		Repo:      repo,
-		Title:     pull.GetTitle(),
-		URL:       pull.GetHTMLURL(),
+		Title:     title,
+		URL:       htmlURL,
 		PRStatus:  status,
 		CreatedAt: e.GetCreatedAt().Time,
 	}
 
 	// For merged PRs, fetch commits for dedup
 	var shas []string
-	if status == model.PRStatusMerged {
-		parts := strings.SplitN(repo, "/", 2)
-		if len(parts) == 2 {
-			shas, err = c.FetchPRCommits(ctx, parts[0], parts[1], pull.GetNumber())
-			if err != nil {
-				return nil, nil, err
-			}
-			for _, sha := range shas {
-				activity.Commits = append(activity.Commits, model.Commit{SHA: sha})
-			}
+	if status == model.PRStatusMerged && repoOK && number > 0 && c != nil && c.gh != nil {
+		shas, err = c.FetchPRCommits(ctx, owner, repoName, number)
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, sha := range shas {
+			activity.Commits = append(activity.Commits, model.Commit{SHA: sha})
 		}
 	}
 

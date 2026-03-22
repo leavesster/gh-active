@@ -73,11 +73,15 @@ func reportCmd() *cobra.Command {
 			fmt.Fprintf(os.Stderr, "Fetching events for %s (%s ~ %s)...\n",
 				user, startTime.Format("2006-01-02"), endTime.Format("2006-01-02"))
 
-			events, err := client.FetchEvents(ctx, user, startTime, endTime)
+			events, truncated, err := client.FetchEvents(ctx, user, startTime, endTime)
 			if err != nil {
 				return fmt.Errorf("fetch events: %w", err)
 			}
 			fmt.Fprintf(os.Stderr, "Found %d events\n", len(events))
+			if truncated {
+				fmt.Fprintf(os.Stderr, "Warning: hit GitHub events pagination cap before reaching %s; older activity in range may be missing\n",
+					startTime.Format("2006-01-02"))
+			}
 
 			activities, err := client.ParseEvents(ctx, events)
 			if err != nil {
