@@ -234,7 +234,7 @@ func newLLM(cfg *config.Config, backend string) (llm.LLM, error) {
 		if cfg.LLM.OpenAI.APIKey == "" {
 			return nil, fmt.Errorf("OpenAI API key required: set OPENAI_API_KEY or configure ~/.gh-active.yaml")
 		}
-		return llm.NewOpenAI(cfg.LLM.OpenAI.APIKey, cfg.LLM.OpenAI.Model, cfg.LLM.OpenAI.BaseURL), nil
+		return llm.NewOpenAI(cfg.LLM.OpenAI.APIKey, cfg.LLM.OpenAI.Model, cfg.LLM.OpenAI.BaseURL, cfg.LLM.OpenAI.Mode), nil
 	default:
 		return nil, fmt.Errorf("unknown LLM backend: %q (supported: claude, openai)", backend)
 	}

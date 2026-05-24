@@ -35,6 +35,7 @@ type OpenAIConfig struct {
 	APIKey  string `yaml:"api_key"`
 	Model   string `yaml:"model"`
 	BaseURL string `yaml:"base_url"`
+	Mode    string `yaml:"mode"`
 }
 
 type ReportConfig struct {
@@ -47,7 +48,7 @@ func Load() (*Config, error) {
 		LLM: LLMConfig{
 			Default: "claude",
 			Claude:  ClaudeConfig{Model: "claude-sonnet-4-5-20250929"},
-			OpenAI:  OpenAIConfig{Model: "gpt-4o"},
+			OpenAI:  OpenAIConfig{Model: "gpt-4o", Mode: "responses"},
 		},
 		Report: ReportConfig{Language: "zh-CN"},
 	}
@@ -69,6 +70,12 @@ func Load() (*Config, error) {
 	}
 	if v := os.Getenv("OPENAI_API_KEY"); v != "" {
 		cfg.LLM.OpenAI.APIKey = v
+	}
+	if v := os.Getenv("OPENAI_MODEL"); v != "" {
+		cfg.LLM.OpenAI.Model = v
+	}
+	if v := os.Getenv("OPENAI_API_MODE"); v != "" {
+		cfg.LLM.OpenAI.Mode = v
 	}
 
 	// fallback: use gh CLI auth token if no GitHub token configured
@@ -102,8 +109,9 @@ llm:
     base_url: ""      # custom API endpoint (e.g. proxy)
   openai:
     api_key: ""       # or set OPENAI_API_KEY env var
-    model: gpt-4o
+    model: gpt-4o     # or set OPENAI_MODEL env var
     base_url: ""      # custom API endpoint (e.g. proxy)
+    mode: responses   # responses or chat; can also be OPENAI_API_MODE
 
 report:
   language: zh-CN

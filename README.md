@@ -94,15 +94,16 @@ llm:
     base_url: ""      # custom API endpoint (e.g. proxy)
   openai:
     api_key: ""       # or set OPENAI_API_KEY env var
-    model: gpt-4o
+    model: gpt-4o     # or set OPENAI_MODEL env var
     base_url: ""      # custom API endpoint (e.g. proxy)
+    mode: responses   # responses or chat; can also be OPENAI_API_MODE
 
 report:
   language: zh-CN
   output: ""          # default stdout; can be overridden by --output
 ```
 
-Environment variables take priority over the config file.
+Environment variables take priority over the config file. OpenAI mode can be set to `responses` for `/v1/responses` or `chat` for `/v1/chat/completions`.
 
 ### GitHub Authentication
 
@@ -124,7 +125,7 @@ GitHub Events API → Paginated fetch → Compare API for commits → SHA dedup 
 2. For each PushEvent, use Compare API (`before...head`) to get the actual commit list
 3. For merged PRs, fetch their commit SHA list
 4. Automatically deduplicate using SHA set: commits in Push that belong to a PR are filtered out
-5. Feed deduplicated activities to LLM with prompt constraints: group by repository and keep near one sentence per event
+5. Feed deduplicated activities to LLM with prompt constraints: group by repository and keep near one sentence per event. OpenAI-compatible backends can use either the Responses API (`/v1/responses`) or Chat Completions (`/v1/chat/completions`) via `llm.openai.mode`.
 6. Output a Markdown report with "Completed" and "In Progress" sections
 
 ## Tracked Activity Types

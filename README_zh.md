@@ -94,15 +94,16 @@ llm:
     base_url: ""      # 自定义 API 地址（如代理）
   openai:
     api_key: ""       # 或设置 OPENAI_API_KEY 环境变量
-    model: gpt-4o
+    model: gpt-4o     # 或设置 OPENAI_MODEL 环境变量
     base_url: ""      # 自定义 API 地址（如代理）
+    mode: responses   # responses 或 chat；也可用 OPENAI_API_MODE
 
 report:
   language: zh-CN
   output: ""          # 默认输出到 stdout，可被 --output 覆盖
 ```
 
-环境变量优先级高于配置文件。
+环境变量优先级高于配置文件。OpenAI mode 可设为 `responses` 使用 `/v1/responses`，或设为 `chat` 使用 `/v1/chat/completions`。
 
 ### GitHub 鉴权
 
@@ -124,7 +125,7 @@ GitHub Events API → 分页拉取 → Compare API 获取 commits → SHA 去重
 2. 对每个 PushEvent，用 Compare API (`before...head`) 获取实际 commit 列表
 3. 对已合并的 PR，获取其 commit SHA 列表
 4. 用 SHA 集合自动去重：Push 中属于 PR 的 commits 被过滤掉
-5. 将去重后的活动喂给 LLM，并通过 prompt 约束为按仓库分组、尽量一条 event 一句话
+5. 将去重后的活动喂给 LLM，并通过 prompt 约束为按仓库分组、尽量一条 event 一句话。OpenAI 兼容后端可通过 `llm.openai.mode` 选择 Responses API (`/v1/responses`) 或 Chat Completions (`/v1/chat/completions`)
 6. 输出分"已完成"和"进行中"两个板块的 Markdown 周报
 
 ## 跟踪的活动类型
