@@ -47,6 +47,9 @@ gh-active report --user=torvalds --llm=claude
 # 指定时间范围，输出到文件
 gh-active report --user=torvalds --start=2026-02-10 --end=2026-02-16 -o report.md
 
+# 只指定起始日期，则查询该日期到当前时间
+gh-active report --user=torvalds --start=2026-02-10
+
 # 或者在配置里设置默认输出路径
 gh-active init
 # 然后在 ~/.gh-active.yaml 里设置 report.output
@@ -67,8 +70,8 @@ gh-active report [flags]
 Flags:
       --user string     GitHub 用户名（默认：当前认证用户）
       --week string     "previous" 查上周，或任意日期 (YYYY-MM-DD) 查所在周
-      --start string    起始日期 (YYYY-MM-DD)，默认本周一
-      --end string      结束日期 (YYYY-MM-DD)，默认当前时间
+      --start string    起始日期 (YYYY-MM-DD)，默认本周一；设置 --week 时忽略
+      --end string      结束日期 (YYYY-MM-DD)，默认当前时间；设置 --week 时忽略
       --llm string      LLM 后端 (claude, openai)
       --no-llm          跳过 LLM，直接输出结构化数据
   -o, --output string   输出文件路径

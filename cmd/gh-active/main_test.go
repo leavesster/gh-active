@@ -31,7 +31,8 @@ func TestWeekMonday(t *testing.T) {
 }
 
 func TestParseTimeRange_Week(t *testing.T) {
-	start, end, err := parseTimeRange("", "", "2026-02-19")
+	now := time.Date(2026, 5, 25, 15, 30, 0, 0, time.UTC)
+	start, end, err := parseTimeRangeAt(now, "", "", "2026-02-19")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,12 +45,12 @@ func TestParseTimeRange_Week(t *testing.T) {
 }
 
 func TestParseTimeRange_Previous(t *testing.T) {
-	start, end, err := parseTimeRange("", "", "previous")
+	now := time.Date(2026, 5, 25, 15, 30, 0, 0, time.UTC)
+	start, end, err := parseTimeRangeAt(now, "", "", "previous")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	now := time.Now()
 	wantStart := weekMonday(now).AddDate(0, 0, -7)
 	wantEnd := wantStart.AddDate(0, 0, 7).Add(-time.Second)
 
@@ -62,24 +63,57 @@ func TestParseTimeRange_Previous(t *testing.T) {
 }
 
 func TestParseTimeRange_Default_CurrentWeek(t *testing.T) {
-	start, end, err := parseTimeRange("", "", "")
+	now := time.Date(2026, 5, 25, 15, 30, 0, 0, time.UTC)
+	start, end, err := parseTimeRangeAt(now, "", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	now := time.Now()
 	wantMonday := weekMonday(now)
 
 	if got := start.Format("2006-01-02"); got != wantMonday.Format("2006-01-02") {
 		t.Errorf("start = %s, want %s (this Monday)", got, wantMonday.Format("2006-01-02"))
 	}
-	// end should be close to now (within a few seconds)
-	diff := now.Sub(end)
-	if diff < 0 {
-		diff = -diff
+	if !end.Equal(now) {
+		t.Errorf("end = %v, want %v", end, now)
 	}
-	if diff > 5*time.Second {
-		t.Errorf("end = %v, want close to now (%v), diff = %v", end, now, diff)
+}
+
+func TestParseTimeRange_StartOnly(t *testing.T) {
+	now := time.Date(2026, 5, 25, 15, 30, 0, 0, time.UTC)
+	start, end, err := parseTimeRangeAt(now, "2026-05-18", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got := start.Format("2006-01-02 15:04:05"); got != "2026-05-18 00:00:00" {
+		t.Errorf("start = %s, want 2026-05-18 00:00:00", got)
+	}
+	if !end.Equal(now) {
+		t.Errorf("end = %v, want %v", end, now)
+	}
+}
+
+func TestParseTimeRange_EndOnly(t *testing.T) {
+	now := time.Date(2026, 5, 25, 15, 30, 0, 0, time.UTC)
+	start, end, err := parseTimeRangeAt(now, "", "2026-05-25", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got := start.Format("2006-01-02 15:04:05"); got != "2026-05-25 00:00:00" {
+		t.Errorf("start = %s, want 2026-05-25 00:00:00", got)
+	}
+	if got := end.Format("2006-01-02 15:04:05"); got != "2026-05-25 23:59:59" {
+		t.Errorf("end = %s, want 2026-05-25 23:59:59", got)
+	}
+}
+
+func TestParseTimeRange_RejectsEndBeforeStart(t *testing.T) {
+	now := time.Date(2026, 5, 25, 15, 30, 0, 0, time.UTC)
+	_, _, err := parseTimeRangeAt(now, "2026-05-25", "2026-05-24", "")
+	if err == nil {
+		t.Fatal("expected error")
 	}
 }
 

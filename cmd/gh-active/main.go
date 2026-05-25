@@ -142,8 +142,8 @@ func reportCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&user, "user", "", "GitHub username (default: authenticated user)")
-	cmd.Flags().StringVar(&start, "start", "", "Start date (YYYY-MM-DD), default: last Monday")
-	cmd.Flags().StringVar(&end, "end", "", "End date (YYYY-MM-DD), default: last Sunday")
+	cmd.Flags().StringVar(&start, "start", "", "Start date (YYYY-MM-DD), default: this Monday")
+	cmd.Flags().StringVar(&end, "end", "", "End date (YYYY-MM-DD), default: now")
 	cmd.Flags().StringVar(&week, "week", "", "\"previous\" for last week, or any date (YYYY-MM-DD) to pick that week")
 	cmd.Flags().StringVar(&llmName, "llm", "", "LLM backend (claude, openai)")
 	cmd.Flags().StringVarP(&output, "output", "o", "", "Output file path (overrides report.output config)")
@@ -177,8 +177,10 @@ func initCmd() *cobra.Command {
 }
 
 func parseTimeRange(start, end, week string) (time.Time, time.Time, error) {
-	now := time.Now()
+	return parseTimeRangeAt(time.Now(), start, end, week)
+}
 
+func parseTimeRangeAt(now time.Time, start, end, week string) (time.Time, time.Time, error) {
 	// --week=previous: last completed week (Mon~Sun)
 	if week == "previous" {
 		mon := weekMonday(now).AddDate(0, 0, -7)
@@ -197,20 +199,29 @@ func parseTimeRange(start, end, week string) (time.Time, time.Time, error) {
 		return mon, sun, nil
 	}
 
-	if start != "" && end != "" {
+	startTime := weekMonday(now)
+	if start != "" {
 		s, err := time.Parse("2006-01-02", start)
 		if err != nil {
 			return time.Time{}, time.Time{}, fmt.Errorf("invalid start date: %w", err)
 		}
+		startTime = s
+	}
+
+	endTime := now
+	if end != "" {
 		e, err := time.Parse("2006-01-02", end)
 		if err != nil {
 			return time.Time{}, time.Time{}, fmt.Errorf("invalid end date: %w", err)
 		}
-		return s, e.Add(24*time.Hour - time.Second), nil
+		endTime = e.Add(24*time.Hour - time.Second)
 	}
 
-	// default: current week (this Monday ~ now)
-	return weekMonday(now), now, nil
+	if endTime.Before(startTime) {
+		return time.Time{}, time.Time{}, fmt.Errorf("end date before start date")
+	}
+
+	return startTime, endTime, nil
 }
 
 // weekMonday returns Monday 00:00:00 of the week containing d.

@@ -58,7 +58,7 @@ internal/config/config.go     YAML config + env var override + gh CLI auth fallb
 - **LLM `base_url`:** Both Claude and OpenAI support custom base URL for proxy/gateway setups. OpenAI-compatible backends select the API route with `llm.openai.mode`: `responses` for `/v1/responses`, `chat` for `/v1/chat/completions`.
 - **LLM prompt output style:** Summary should be grouped by repository, and each input event should map to a single concise sentence whenever possible.
 - **Report output:** `--output/-o` overrides `report.output` in config. Empty output means write to stdout. File output creates parent directories automatically.
-- **`--week` flag:** `previous` for last completed week; or pass any date, `weekMonday()` computes the Monday 00:00 of that week. Time range priority: `--week` > `--start/--end` > default (current week, Mon~now).
+- **Time range flags:** `--week` takes priority over `--start/--end`. `--week=previous` means the last completed Mon~Sun; any other `--week` date expands to that date's Mon~Sun. Without `--week`, `--start` and `--end` are independent: missing start defaults to this Monday, and missing end defaults to now.
 - **Compare API failures are silent:** Force pushes or deleted branches cause 404 — these pushes are skipped, not errors.
 
 ## Common Pitfalls

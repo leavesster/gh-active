@@ -47,6 +47,9 @@ gh-active report --user=torvalds --llm=claude
 # Specify time range and output to file
 gh-active report --user=torvalds --start=2026-02-10 --end=2026-02-16 -o report.md
 
+# Specify only a start date to query from that date through now
+gh-active report --user=torvalds --start=2026-02-10
+
 # Or configure a default output path once
 gh-active init
 # then set report.output in ~/.gh-active.yaml
@@ -67,8 +70,8 @@ gh-active report [flags]
 Flags:
       --user string     GitHub username (default: authenticated user)
       --week string     "previous" for last week, or any date (YYYY-MM-DD) to pick that week
-      --start string    Start date (YYYY-MM-DD), default: this Monday
-      --end string      End date (YYYY-MM-DD), default: now
+      --start string    Start date (YYYY-MM-DD), default: this Monday unless --week is set
+      --end string      End date (YYYY-MM-DD), default: now unless --week is set
       --llm string      LLM backend (claude, openai)
       --no-llm          Skip LLM, output structured data directly
   -o, --output string   Output file path
