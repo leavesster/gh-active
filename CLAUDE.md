@@ -55,7 +55,7 @@ internal/config/config.go     YAML config + env var override + gh CLI auth fallb
 - **PR status priority:** merged(3) > review(2) > opened(1). Same PR with multiple events in one week keeps the highest status. Performed-events may emit merged PRs as `action=merged` rather than `closed + merged=true`.
 - **PR payloads may be partial:** `users/{username}/events` can omit PR title / HTML URL / merged bool. Parser should fall back to repo+number and fetch full PR details when needed.
 - **GitHub auth chain:** `GITHUB_TOKEN` env → config file → `gh auth token` CLI fallback.
-- **LLM `base_url`:** Both Claude and OpenAI support custom base URL for proxy/gateway setups. OpenAI-compatible backends select the API route with `llm.openai.mode`: `responses` for `/v1/responses`, `chat` for `/v1/chat/completions`.
+- **LLM `base_url`:** Both Claude and OpenAI support custom base URL for proxy/gateway setups. OpenAI-compatible backends select the API route with `llm.openai.mode`: `responses` for `/v1/responses`, `chat` for `/v1/chat/completions`. OpenAI API key env accepts `OPENAI_API_KEY`, with `OPENAI_KEY` as a compatibility alias.
 - **LLM prompt output style:** Summary should be grouped by repository, and each input event should map to a single concise sentence whenever possible.
 - **Report output:** `--output/-o` overrides `report.output` in config. Empty output means write to stdout. File output creates parent directories automatically.
 - **Time range flags:** `--week` takes priority over `--start/--end`. `--week=previous` means the last completed Mon~Sun; any other `--week` date expands to that date's Mon~Sun. Without `--week`, `--start` and `--end` are independent: missing start defaults to this Monday, and missing end defaults to now.

@@ -96,7 +96,7 @@ llm:
     model: claude-sonnet-4-5-20250929
     base_url: ""      # custom API endpoint (e.g. proxy)
   openai:
-    api_key: ""       # or set OPENAI_API_KEY env var
+    api_key: ""       # or set OPENAI_API_KEY/OPENAI_KEY env var
     model: gpt-4o     # or set OPENAI_MODEL env var
     base_url: ""      # custom API endpoint (e.g. proxy)
     mode: responses   # responses or chat; can also be OPENAI_API_MODE

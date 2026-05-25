@@ -96,7 +96,7 @@ llm:
     model: claude-sonnet-4-5-20250929
     base_url: ""      # 自定义 API 地址（如代理）
   openai:
-    api_key: ""       # 或设置 OPENAI_API_KEY 环境变量
+    api_key: ""       # 或设置 OPENAI_API_KEY/OPENAI_KEY 环境变量
     model: gpt-4o     # 或设置 OPENAI_MODEL 环境变量
     base_url: ""      # 自定义 API 地址（如代理）
     mode: responses   # responses 或 chat；也可用 OPENAI_API_MODE
